@@ -1,5 +1,8 @@
 from sklearn.base import ClassifierMixin, BaseEstimator
 from sklearn.tree import DecisionTreeClassifier
+from rolexboost.util import get_CART_tree, split_subsets, bootstrap
+from rolexboost.exceptions import NotFittedException
+from rolexboost.lib import PCA
 
 __all__ = ["RotationForestClassifier", "FlexBoostClassifier", "RolexBoostClassifier"]
 
@@ -7,15 +10,35 @@ __all__ = ["RotationForestClassifier", "FlexBoostClassifier", "RolexBoostClassif
 class RotationForestClassifier(BaseEstimator, ClassifierMixin):
     """Temperoral implementation that use a DecisionTreeClassifier to mock the classifier behavior"""
 
-    def __init__(self):
+    def __init__(
+        self,
+        n_estimators=100,
+        base_estimator_getter=get_CART_tree,
+        n_features_per_subset=3,  # In the algorithm description, the parameter is the number of subspaces.
+        # However, in the validation part, "the number of features in each subset was set to three".
+        # The parameter is thus formulated as number of features per subset, to make the future reproduction of evaluation easier
+        bootstrap_rate=0.75,
+    ):
         super()
-        self._inner_estimator = DecisionTreeClassifier()
+        self.n_estimators = n_estimators
+        self.base_estimator_getter = base_estimator_getter
+        self.n_features_per_subset = n_features_per_subset
+        self.bootstrap_rate = bootstrap_rate
 
     def fit(self, X, y):
-        self._inner_estimator.fit(X, y)
+        self.estimators = [self._fit_one_estimator(X, y) for _ in range(self.n_estimators)]
         return self
 
+    def _fit_one_estimator(self, X, y):
+        idx, X_subsets = split_subsets(X, self.n_features_per_subset)
+        X_bootstrapped = [bootstrap(x, self.bootstrap_rate) for x in X_subsets]
+        pca_coefficients = [PCA().fit(x).components_ for x in X_bootstrapped]
+        
+
     def predict(self, X):
+        if not hasattr(self, "estimators"):
+            raise NotFittedException(self)
+
         return self._inner_estimator.predict(X)
 
 
