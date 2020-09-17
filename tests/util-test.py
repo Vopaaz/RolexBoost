@@ -1,4 +1,4 @@
-from rolexboost.util import split_subsets, rearrange_matrix_row, ensemble_predictions
+from rolexboost.util import split_subsets, rearrange_matrix_row, ensemble_predictions_unweighted, ensemble_predictions_weighted
 import numpy as np
 
 
@@ -20,8 +20,16 @@ def rearrange_matrix_row_test():
     assert (res == expected).all()
 
 
-def ensemble_predictions_test():
+def ensemble_predictions_unweighted_test():
     predictions = [np.array([0, 0, 1, 1]), np.array([0, 1, 1, 1]), np.array([1, 0, 0, 1])]
-    res = ensemble_predictions(predictions)
+    res = ensemble_predictions_unweighted(predictions)
     expected = np.array([0, 0, 1, 1])
+    assert (res == expected).all()
+
+
+def ensemble_predictions_weighted_test():
+    predictions = [np.array([0, 0, 1, 1]), np.array([1, 1, 0, 0]), np.array([1, 1, 0, 0]), np.array([0, 0, 1, 0])]
+    weights = [10, 0.1, 0.1, 9.9]
+    res = ensemble_predictions_weighted(predictions, weights)
+    expected = np.array([0, 0, 1, 0])
     assert (res == expected).all()
