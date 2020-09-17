@@ -1,8 +1,10 @@
 from sklearn.base import ClassifierMixin, BaseEstimator
 from sklearn.tree import DecisionTreeClassifier
-from rolexboost.util import get_CART_tree, split_subsets, bootstrap
-from rolexboost.exceptions import NotFittedException
+from rolexboost.util import get_CART_tree, split_subsets, bootstrap, rearrange_matrix_row, ensemble_predictions
+from rolexboost.exceptions import NotFittedException, InsufficientDataException
 from rolexboost.lib import PCA
+import numpy as np
+import scipy
 
 __all__ = ["RotationForestClassifier", "FlexBoostClassifier", "RolexBoostClassifier"]
 
@@ -26,6 +28,9 @@ class RotationForestClassifier(BaseEstimator, ClassifierMixin):
         self.bootstrap_rate = bootstrap_rate
 
     def fit(self, X, y):
+        if X.shape[0] < self.n_features_per_subset:
+            raise InsufficientDataException(self.n_features_per_subset.X.shape[0])
+
         self.estimators = [self._fit_one_estimator(X, y) for _ in range(self.n_estimators)]
         return self
 
@@ -33,13 +38,21 @@ class RotationForestClassifier(BaseEstimator, ClassifierMixin):
         idx, X_subsets = split_subsets(X, self.n_features_per_subset)
         X_bootstrapped = [bootstrap(x, self.bootstrap_rate) for x in X_subsets]
         pca_coefficients = [PCA().fit(x).components_ for x in X_bootstrapped]
-        
+        raw_diag_matrix = scipy.linalg.block_diag(*pca_coefficients)
+        rotation_matrix = rearrange_matrix_row(raw_diag_matrix, np.concatenate(idx))
+        rotated_X = X.dot(rotation_matrix)
+
+        clf = self.base_estimator_getter()
+        clf.fit(rotated_X, y)
+        clf._rotation_matrix = rotation_matrix
+        return clf
 
     def predict(self, X):
         if not hasattr(self, "estimators"):
             raise NotFittedException(self)
 
-        return self._inner_estimator.predict(X)
+        predictions = [clf.predict(X.dot(clf._rotation_matrix)) for clf in self.estimators]
+        return ensemble_predictions(predictions)
 
 
 class FlexBoostClassifier(BaseEstimator, ClassifierMixin):
