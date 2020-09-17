@@ -130,3 +130,6 @@ dmypy.json
 
 # Editor
 .vscode/
+
+# Exploration notebook
+explore.ipynb
