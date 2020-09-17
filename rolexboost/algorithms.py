@@ -88,23 +88,21 @@ class FlexBoostClassifier(BaseEstimator, ClassifierMixin):
 
         best_clf, best_weight, best_alpha, best_prediction = None, None, None, None
         best_error = np.inf
+        best_k = None
 
-        print()
         for k in [self.K, 1, 1 / self.K]:
             clf = DecisionTreeClassifier(**self.decision_tree_kwargs)
             weight = previous_weight * np.exp(
-                k * previous_alpha * np.vectorize(lambda y_true, y_pred: -1 if y_true == y_pred else 1)(y, previous_prediction)
+                k * previous_alpha * np.vectorize(lambda y_true, y_pred: 0 if y_true == y_pred else 1)(y, previous_prediction)
             )
             weight /= weight.sum()
             clf.fit(X, y, sample_weight=weight)
             prediction = clf.predict(X)
             error = self.calc_error(y, prediction, weight)
-            print(k, error)
             if error < best_error:
                 best_error = error
                 best_clf, best_weight, best_alpha, best_prediction = clf, weight, self.calc_alpha(k, error), prediction
-        print(best_error, best_alpha)
-        print()
+                best_k = k
 
         return best_clf, best_weight, best_error, best_alpha, best_prediction
 
