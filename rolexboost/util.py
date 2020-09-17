@@ -5,10 +5,6 @@ from rolexboost.exceptions import DimNotMatchException
 import scipy
 
 
-def get_CART_tree():
-    return DecisionTreeClassifier()
-
-
 def split_subsets(X, n_features_per_subset):
     """
     Returns: (idx, value)

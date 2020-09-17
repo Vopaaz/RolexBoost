@@ -1,6 +1,6 @@
 from sklearn.base import ClassifierMixin, BaseEstimator
 from sklearn.tree import DecisionTreeClassifier
-from rolexboost.util import get_CART_tree, split_subsets, bootstrap, rearrange_matrix_row, ensemble_predictions
+from rolexboost.util import split_subsets, bootstrap, rearrange_matrix_row, ensemble_predictions
 from rolexboost.exceptions import NotFittedException, InsufficientDataException
 from rolexboost.lib import PCA
 import numpy as np
@@ -15,17 +15,17 @@ class RotationForestClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
         n_estimators=100,
-        base_estimator_getter=get_CART_tree,
         n_features_per_subset=3,  # In the algorithm description, the parameter is the number of subspaces.
         # However, in the validation part, "the number of features in each subset was set to three".
         # The parameter is thus formulated as number of features per subset, to make the future reproduction of evaluation easier
         bootstrap_rate=0.75,
+        **decision_tree_kwargs
     ):
         super()
         self.n_estimators = n_estimators
-        self.base_estimator_getter = base_estimator_getter
         self.n_features_per_subset = n_features_per_subset
         self.bootstrap_rate = bootstrap_rate
+        self.decision_tree_kwargs = decision_tree_kwargs
 
     def fit(self, X, y):
         if X.shape[0] < self.n_features_per_subset:
@@ -42,7 +42,7 @@ class RotationForestClassifier(BaseEstimator, ClassifierMixin):
         rotation_matrix = rearrange_matrix_row(raw_diag_matrix, np.concatenate(idx))
         rotated_X = X.dot(rotation_matrix)
 
-        clf = self.base_estimator_getter()
+        clf = DecisionTreeClassifier(**self.decision_tree_kwargs)
         clf.fit(rotated_X, y)
         clf._rotation_matrix = rotation_matrix
         return clf
