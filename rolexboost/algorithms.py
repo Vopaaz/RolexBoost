@@ -66,8 +66,7 @@ class FlexBoostClassifier(BaseEstimator, ClassifierMixin):
         return np.average(y_true != y_pred, weights=weight)
 
     def calc_alpha(self, k, error):
-        EPSILON = 1e-100
-        return 1 / (2 * k) * np.log((1 - error + EPSILON) / (error + EPSILON))
+        return 1 / (2 * k) * np.log((1 - error + self.ERROR_THRESHOLD) / (error + self.ERROR_THRESHOLD))
 
     def _fit_one_estimator(self, X, y, previous_weight=None, previous_error=None, previous_alpha=None, previous_prediction=None):
         """
