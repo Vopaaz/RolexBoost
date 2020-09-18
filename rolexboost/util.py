@@ -3,6 +3,7 @@ import numpy as np
 import random
 from rolexboost.exceptions import DimNotMatchException
 import scipy
+from collections import defaultdict
 
 
 def split_subsets(X, n_features_per_subset):
@@ -94,7 +95,7 @@ def rearrange_matrix_row(mat, idx):
     return np.vstack(sorted_rows)
 
 
-def ensemble_predictions(predictions):
+def ensemble_predictions_unweighted(predictions):
     """Ensemble the predictions using mode.
     Parameter:
     - predictions: list of 1-d array, each representing the prediction of a base estimator
@@ -106,10 +107,40 @@ def ensemble_predictions(predictions):
     ...     np.array([0,1,1,1]),
     ...     np.array([1,0,0,1])
     ... ]
-    >>> ensemble_predictions(predictions)
+    >>> ensemble_predictions_unweighted(predictions)
     np.array([0,0,1,1])
     ```
     """
 
     pred_arr = np.stack(predictions, axis=-1)
     return scipy.stats.mode(pred_arr, axis=1)[0].reshape(-1)
+
+
+def ensemble_predictions_weighted(predictions, weights):
+    """Ensemble the predictions according to the weights.
+    Parameter:
+    - predictions: list of 1-d array, each representing the prediction of a base estimator
+    - weights: list of numbers, each representing the weight of the corresponding prediction
+
+    Example:
+    ```python
+    >>> predictions = [
+    ...     np.array([0,0,1,1]),
+    ...     np.array([1,1,0,0]),
+    ...     np.array([1,1,0,0]),
+    ...     np.array([0,0,1,0])
+    ... ]
+    >>> weights = [10, 0.1, 0.1, 9.9]
+    >>> ensemble_predictions_weighted(predictions, weights)
+    np.array([0,0,1,0])
+    ```
+    """
+
+    length = predictions[0].shape[0]
+    acc = [{} for _ in range(length)]
+    for prediction, weight in zip(predictions, weights):
+        for ix in range(length):
+            this_ix_pred = prediction[ix]
+            acc[ix][this_ix_pred] = acc[ix].get(this_ix_pred, 0) + weight
+    result = [max(d.items(), key=lambda t: t[1])[0] for d in acc]
+    return np.array(result)
