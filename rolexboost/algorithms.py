@@ -20,7 +20,7 @@ from abc import ABC
 __all__ = ["RotationForestClassifier", "FlexBoostClassifier", "RolexBoostClassifier"]
 
 
-class RolexAlgorithmMixin(BaseEstimator, ClassifierMixin, ABC):
+class RolexAlgorithmMixin(BaseEstimator, ClassifierMixin):
     def _check_fitted(self):
         if not hasattr(self, "estimators_"):
             raise NotFittedException(self)
@@ -143,7 +143,7 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
         return ensemble_predictions_weighted(predictions, self.alphas)
 
 
-class RolexBoostClassifier(RolexAlgorithmMixin):
+class RolexBoostClassifier(RotationForestClassifier, FlexBoostClassifier):
     """Temperoral implementation that use a DecisionTreeClassifier to mock the classifier behavior"""
 
     def __init__(
@@ -154,18 +154,28 @@ class RolexBoostClassifier(RolexAlgorithmMixin):
         K=0.5,
         **decision_tree_kwargs
     ):
-        super()
-        self.n_estimators = (n_estimators,)
-        self.n_features_per_subset = n_features_per_subset
-        self.bootstrap_rate = bootstrap_rate
-        self.K = K
-        self.decision_tree_kwargs = decision_tree_kwargs
+        RotationForestClassifier.__init__(self, n_estimators, n_features_per_subset, bootstrap_rate, **decision_tree_kwargs)
+        FlexBoostClassifier.__init__(self, n_estimators, K, **decision_tree_kwargs)
 
-        self._inner_estimator = DecisionTreeClassifier()
+    def _fit_one_estimator(self, X, y, previous_weight=None, previous_error=None, previous_alpha=None, previous_prediction=None):
+        rotation_matrix = self._construct_rotation_matrix(X)
+        rotated_X = X.dot(rotation_matrix)
+
+        if previous_weight is None and previous_error is None and previous_prediction is None:
+            clf, weight, error, alpha, prediction = self._fit_first_estimator(rotated_X, y)
+        else:
+            clf, weight, error, alpha, prediction = self._fit_subsequent_estimator(
+                rotated_X, y, previous_weight, previous_error, previous_alpha, previous_prediction
+            )
+        clf._rotation_matrix = rotation_matrix
+        return clf, weight, error, alpha, prediction
 
     def fit(self, X, y):
-        self._inner_estimator.fit(X, y)
+        self._rotation_precheck(X)
+        FlexBoostClassifier.fit(self, X, y)
         return self
 
     def predict(self, X):
-        return self._inner_estimator.predict(X)
+        self._check_fitted()
+        predictions = [clf.predict(X.dot(clf._rotation_matrix)) for clf in self.estimators_]
+        return ensemble_predictions_weighted(predictions, self.alphas)
