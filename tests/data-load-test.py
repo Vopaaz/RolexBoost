@@ -10,7 +10,11 @@ name_list = [
     'ILPD',
     'ionosphere',
     'monks',
-    'parkinson'
+    'parkinson',
+    'somerville',
+    'sonar',
+    'spine',
+    'transfusion'
 ]
 
 def load_data(name='haberman'):
