@@ -14,7 +14,12 @@ name_list = [
     'somerville',
     'sonar',
     'spine',
-    'transfusion'
+    'transfusion',
+    'auto_mpg',
+    'cmc',
+    'iris',
+    'seed',
+    'wine'
 ]
 
 def load_data(name='haberman'):
