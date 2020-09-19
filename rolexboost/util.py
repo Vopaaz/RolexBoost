@@ -148,6 +148,8 @@ def ensemble_predictions_weighted(predictions, weights):
 
 EPSILON = 1e-100
 
+K_ALPHA_THRESHOLD = 500
+
 
 def calc_error(y_true, y_pred, weight):
     return np.average(y_true != y_pred, weights=weight)

@@ -75,4 +75,4 @@ def flexboost_adaboost_test():
         b_acc = accuracy_score(test_y, b_pred_y)
         b_accs.append(b_acc)
 
-    assert np.mean(acc) >= np.mean(b_acc) - 0.005
+    assert np.mean(acc) >= np.mean(b_acc) - 0.01

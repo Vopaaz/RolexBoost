@@ -6,10 +6,10 @@ from rolexboost.util import (
     rearrange_matrix_row,
     ensemble_predictions_unweighted,
     ensemble_predictions_weighted,
-    EPSILON,
     calc_alpha,
     calc_error,
     calc_updated_weight,
+    K_ALPHA_THRESHOLD,
 )
 from rolexboost.exceptions import NotFittedException, InsufficientDataException
 from rolexboost.lib import PCA
@@ -25,6 +25,24 @@ class RolexAlgorithmMixin(BaseEstimator, ClassifierMixin):
         if not hasattr(self, "estimators_"):
             raise NotFittedException(self)
 
+    def _get_decision_tree_classifier(self):
+        return DecisionTreeClassifier(
+            criterion=self.criterion,
+            splitter=self.splitter,
+            max_depth=self.max_depth,
+            min_samples_split=self.min_samples_split,
+            min_samples_leaf=self.min_samples_leaf,
+            min_weight_fraction_leaf=self.min_weight_fraction_leaf,
+            max_features=self.max_features,
+            max_leaf_nodes=self.max_leaf_nodes,
+            class_weight=self.class_weight,
+            random_state=self.random_state,
+            min_impurity_decrease=self.min_impurity_decrease,
+            min_impurity_split=self.min_impurity_split,
+            presort=self.presort,
+            ccp_alpha=self.ccp_alpha,
+        )
+
 
 class RotationForestClassifier(RolexAlgorithmMixin):
     def __init__(
@@ -34,13 +52,39 @@ class RotationForestClassifier(RolexAlgorithmMixin):
         # However, in the validation part, "the number of features in each subset was set to three".
         # The parameter is thus formulated as number of features per subset, to make the future reproduction of evaluation easier
         bootstrap_rate=0.75,
-        **decision_tree_kwargs
+        # DecisionTreeClassifier parameters
+        criterion="gini",
+        splitter="best",
+        max_depth=None,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        min_weight_fraction_leaf=0.0,
+        max_features=None,
+        random_state=None,
+        max_leaf_nodes=None,
+        min_impurity_decrease=0.0,
+        min_impurity_split=None,
+        class_weight=None,
+        presort="deprecated",
+        ccp_alpha=0.0,
     ):
-        super()
         self.n_estimators = n_estimators
         self.n_features_per_subset = n_features_per_subset
         self.bootstrap_rate = bootstrap_rate
-        self.decision_tree_kwargs = decision_tree_kwargs
+        self.criterion = criterion
+        self.splitter = splitter
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.min_weight_fraction_leaf = min_weight_fraction_leaf
+        self.max_features = max_features
+        self.max_leaf_nodes = max_leaf_nodes
+        self.class_weight = class_weight
+        self.random_state = random_state
+        self.min_impurity_decrease = min_impurity_decrease
+        self.min_impurity_split = min_impurity_split
+        self.presort = presort
+        self.ccp_alpha = ccp_alpha
 
     def _rotation_precheck(self, X):
         if X.shape[0] < self.n_features_per_subset:
@@ -63,7 +107,7 @@ class RotationForestClassifier(RolexAlgorithmMixin):
         rotation_matrix = self._construct_rotation_matrix(X)
         rotated_X = X.dot(rotation_matrix)
 
-        clf = DecisionTreeClassifier(**self.decision_tree_kwargs)
+        clf = self._get_decision_tree_classifier()
         clf.fit(rotated_X, y)
         clf._rotation_matrix = rotation_matrix
 
@@ -76,17 +120,48 @@ class RotationForestClassifier(RolexAlgorithmMixin):
 
 
 class FlexBoostClassifier(RolexAlgorithmMixin):
-    def __init__(self, n_estimators=100, K=0.5, **decision_tree_kwargs):
-        super()
+    def __init__(
+        self,
+        n_estimators=100,
+        K=0.5,
+        # DecisionTreeClassifier parameters
+        criterion="gini",
+        splitter="best",
+        max_depth=1,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        min_weight_fraction_leaf=0.0,
+        max_features=None,
+        random_state=None,
+        max_leaf_nodes=None,
+        min_impurity_decrease=0.0,
+        min_impurity_split=None,
+        class_weight=None,
+        presort="deprecated",
+        ccp_alpha=0.0,
+    ):
         self.n_estimators = n_estimators
         self.K = K
-        self.decision_tree_kwargs = {**{"max_depth": 1}, **decision_tree_kwargs}
+        self.criterion = criterion
+        self.splitter = splitter
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.min_weight_fraction_leaf = min_weight_fraction_leaf
+        self.max_features = max_features
+        self.max_leaf_nodes = max_leaf_nodes
+        self.class_weight = class_weight
+        self.random_state = random_state
+        self.min_impurity_decrease = min_impurity_decrease
+        self.min_impurity_split = min_impurity_split
+        self.presort = presort
+        self.ccp_alpha = ccp_alpha
 
     def _fit_first_estimator(self, X, y):
         length = X.shape[0]
         weight = np.full((length,), 1 / length)
 
-        clf = DecisionTreeClassifier(**self.decision_tree_kwargs)
+        clf = self._get_decision_tree_classifier()
         clf.fit(X, y, sample_weight=weight)
 
         prediction = clf.predict(X)
@@ -104,7 +179,7 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
 
             weight = calc_updated_weight(previous_weight, k, previous_alpha, y, previous_prediction)
 
-            clf = DecisionTreeClassifier(**self.decision_tree_kwargs)
+            clf = self._get_decision_tree_classifier()
             clf.fit(X, y, sample_weight=weight)
             prediction = clf.predict(X)
             error = calc_error(y, prediction, weight)
@@ -133,7 +208,7 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
             clf, weight, error, alpha, prediction = self._fit_one_estimator(X, y, weight, error, alpha, prediction)
             self.estimators_.append(clf)
             self.alphas.append(alpha)
-            if error <= EPSILON:
+            if 1 / self.K * alpha > K_ALPHA_THRESHOLD:
                 break
         return self
 
@@ -152,10 +227,40 @@ class RolexBoostClassifier(RotationForestClassifier, FlexBoostClassifier):
         n_features_per_subset=3,  # See the inline comment for n_features_per_subset of RotationForest constructor
         bootstrap_rate=0.75,
         K=0.5,
-        **decision_tree_kwargs
+        # DecisionTreeClassifier parameters
+        criterion="gini",
+        splitter="best",
+        max_depth=1,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        min_weight_fraction_leaf=0.0,
+        max_features=None,
+        random_state=None,
+        max_leaf_nodes=None,
+        min_impurity_decrease=0.0,
+        min_impurity_split=None,
+        class_weight=None,
+        presort="deprecated",
+        ccp_alpha=0.0,
     ):
-        RotationForestClassifier.__init__(self, n_estimators, n_features_per_subset, bootstrap_rate, **decision_tree_kwargs)
-        FlexBoostClassifier.__init__(self, n_estimators, K, **decision_tree_kwargs)
+        self.n_estimators = n_estimators
+        self.n_features_per_subset = n_features_per_subset
+        self.bootstrap_rate = bootstrap_rate
+        self.K = K
+        self.criterion = criterion
+        self.splitter = splitter
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.min_weight_fraction_leaf = min_weight_fraction_leaf
+        self.max_features = max_features
+        self.max_leaf_nodes = max_leaf_nodes
+        self.class_weight = class_weight
+        self.random_state = random_state
+        self.min_impurity_decrease = min_impurity_decrease
+        self.min_impurity_split = min_impurity_split
+        self.presort = presort
+        self.ccp_alpha = ccp_alpha
 
     def _fit_one_estimator(self, X, y, previous_weight=None, previous_error=None, previous_alpha=None, previous_prediction=None):
         rotation_matrix = self._construct_rotation_matrix(X)
