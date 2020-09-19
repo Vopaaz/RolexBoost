@@ -14,6 +14,10 @@ data_attributes = {
     "sonar": {"rotation": 0.8094, "flex": 0.8276, "rolex": 0.8386},
     "spine": {"rotation": 0.8347, "flex": 0.8364, "rolex": 0.8503},
     "transfusion": {"rotation": 0.7788, "flex": 0.7952, "rolex": 0.7849},
+    # The following datasets are 3-class problems, but they are splitted into 2-class problems in the paper,
+    # and 3 accuracy scores are reported.
+    # We are not sure about how to split the problem and compare the performance, so they are temperally not in use.
+    #
     # "auto_mpg",
     # "cmc",
     # "iris",
