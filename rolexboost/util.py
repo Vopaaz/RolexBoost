@@ -144,3 +144,20 @@ def ensemble_predictions_weighted(predictions, weights):
             acc[ix][this_ix_pred] = acc[ix].get(this_ix_pred, 0) + weight
     result = [max(d.items(), key=lambda t: t[1])[0] for d in acc]
     return np.array(result)
+
+
+EPSILON = 1e-100
+
+
+def calc_error(y_true, y_pred, weight):
+    return np.average(y_true != y_pred, weights=weight)
+
+
+def calc_alpha(k, error):
+    return 1 / (2 * k) * np.log((1 - error + EPSILON) / (error + EPSILON))
+
+
+def calc_updated_weight(weight, k, alpha, y_true, y_pred):
+    """The returned weight is normalized"""
+    new_weights = weight * np.exp(k * alpha * np.vectorize(lambda y_t, y_p: 0 if y_t == y_p else 1)(y_true, y_pred))
+    return new_weights / new_weights.sum()
