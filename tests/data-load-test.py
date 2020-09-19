@@ -5,7 +5,12 @@ name_list = [
     'breast-cancer-coimbra',
     'breast-cancer-wisconsin-diagnose',
     'breast-cancer-wisconsin',
-    'haberman'
+    'haberman',
+    'heart-disease',
+    'ILPD',
+    'ionosphere',
+    'monks',
+    'parkinson'
 ]
 
 def load_data(name='haberman'):
