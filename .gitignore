@@ -133,3 +133,6 @@ dmypy.json
 
 # Exploration notebook
 explore.ipynb
+
+# Test reports
+*report*.csv
