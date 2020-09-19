@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 name_list = [
+    'breast-cancer-coimbra',
     'breast-cancer-wisconsin-diagnose',
     'breast-cancer-wisconsin',
     'haberman'
