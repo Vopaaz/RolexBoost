@@ -178,14 +178,13 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
         for k in [1, self.K, 1 / self.K]:
 
             weight = calc_updated_weight(previous_weight, k, previous_alpha, y, previous_prediction)
-
             clf = self._get_decision_tree_classifier()
             clf.fit(X, y, sample_weight=weight)
             prediction = clf.predict(X)
-            error = calc_error(y, prediction, weight)
 
+            error = calc_error(y, prediction, previous_weight) # For choose from the three k's, use the same previous weight, otherwise they are not comparable
             if error < best_error:
-                best_error = error
+                best_error = calc_error(y, prediction, weight) # When one is selected as the best, the error passed to the next round should use its own weight.
                 best_clf, best_weight, best_alpha, best_prediction = clf, weight, calc_alpha(k, error), prediction
                 best_k = k
 
