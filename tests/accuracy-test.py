@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from tests.data import load_data, data_attributes
 import time
+from nose.plugins.attrib import attr
 
 APPROX_THRESH = 0.9
 N_JOBS = -1
@@ -32,7 +33,7 @@ def twenty_times_CV(estimator, X, y):
     res = sum(five_fold_CV(estimator, X, y) for _ in range(ROUNDS)) / ROUNDS
     return res
 
-
+@attr("slow")
 def performance_tests():
     results = []
     for dataset, benchmark in data_attributes.items():
