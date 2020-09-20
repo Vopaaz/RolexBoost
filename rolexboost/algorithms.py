@@ -172,7 +172,7 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
 
     def _fit_subsequent_estimator(self, X, y, previous_weight, previous_error, previous_alpha, previous_prediction):
         best_clf, best_weight, best_alpha, best_prediction = None, None, None, None
-        best_error = np.inf
+        best_eval_error = np.inf
         best_k = None
 
         for k in [1, self.K, 1 / self.K]:
@@ -182,12 +182,16 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
             clf.fit(X, y, sample_weight=weight)
             prediction = clf.predict(X)
 
-            error = calc_error(y, prediction, previous_weight) # For choose from the three k's, use the same previous weight, otherwise they are not comparable
-            if error < best_error:
-                best_error = calc_error(y, prediction, weight) # When one is selected as the best, the error passed to the next round should use its own weight.
-                best_clf, best_weight, best_alpha, best_prediction = clf, weight, calc_alpha(k, error), prediction
+            # For choose from the three k's, use the same previous weight, otherwise they are not comparable
+            error = calc_error(y, prediction, previous_weight)
+            if error < best_eval_error:
+                best_eval_error = error
+                best_clf, best_weight, best_prediction = clf, weight, prediction
                 best_k = k
 
+        # When one is selected as the best, the error passed to the next round should use its own weight.
+        best_error = calc_error(y, best_prediction, best_weight)
+        best_alpha = calc_alpha(best_k, best_error)
         return best_clf, best_weight, best_error, best_alpha, best_prediction
 
     def _fit_one_estimator(self, X, y, previous_weight=None, previous_error=None, previous_alpha=None, previous_prediction=None):
