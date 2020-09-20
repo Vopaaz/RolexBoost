@@ -166,3 +166,10 @@ def calc_updated_weight(weight, k, alpha, y_true, y_pred):
     """The returned weight is normalized"""
     new_weights = weight * np.exp(k * alpha * np.vectorize(lambda y_t, y_p: 0 if y_t == y_p else 1)(y_true, y_pred))
     return new_weights / new_weights.sum()
+
+
+def as_numpy_array(*objs):
+    if len(objs) == 1:
+        return np.asarray(objs[0])
+    else:
+        return (np.asarray(o) for o in objs)
