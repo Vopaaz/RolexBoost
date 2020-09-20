@@ -80,7 +80,7 @@ def rearrange_matrix_row(mat, idx):
     np.array([
         [9,10,11],
         [3,4,5],
-        [0,1,2].
+        [0,1,2],
         [6,7,8]
     ])
     ```
@@ -89,10 +89,13 @@ def rearrange_matrix_row(mat, idx):
     if n_rows != len(idx):
         raise DimNotMatchException(n_rows, len(idx))
 
-    row_indexes = [(mat[i], index) for i, index in enumerate(idx)]
+    # The first element is the row's current (physical) index, the second element is its ideal index
+    row_indexes = [(i, index) for i, index in enumerate(idx)]
+    # Sort by the ideal index, so that by slicing with the rearranged physical index, we get the rearranged matrix
     sorted_row_indexes = sorted(row_indexes, key=lambda x: x[1])
-    sorted_rows = [i[0] for i in sorted_row_indexes]
-    return np.vstack(sorted_rows)
+    # Do the slicing
+    indexes = [i[0] for i in sorted_row_indexes]
+    return mat[indexes]
 
 
 def ensemble_predictions_unweighted(predictions):
