@@ -13,7 +13,7 @@ from rolexboost.util import (
     as_numpy_array,
 )
 from rolexboost.exceptions import NotFittedException, InsufficientDataException
-from rolexboost.lib import PCA
+from sklearn.decomposition import PCA
 import numpy as np
 import scipy
 from abc import ABC
