@@ -10,6 +10,7 @@ from rolexboost.util import (
     calc_error,
     calc_updated_weight,
     K_ALPHA_THRESHOLD,
+    as_numpy_array,
 )
 from rolexboost.exceptions import NotFittedException, InsufficientDataException
 from rolexboost.lib import PCA
@@ -91,6 +92,7 @@ class RotationForestClassifier(RolexAlgorithmMixin):
             raise InsufficientDataException(self.n_features_per_subset.X.shape[0])
 
     def fit(self, X, y):
+        X, y = as_numpy_array(X, y)
         self._rotation_precheck(X)
         self.estimators_ = [self._fit_one_estimator(X, y) for _ in range(self.n_estimators)]
         return self
@@ -115,6 +117,7 @@ class RotationForestClassifier(RolexAlgorithmMixin):
 
     def predict(self, X):
         self._check_fitted()
+        X = as_numpy_array(X)
         predictions = [clf.predict(X.dot(clf._rotation_matrix)) for clf in self.estimators_]
         return ensemble_predictions_unweighted(predictions)
 
@@ -204,6 +207,8 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
             return self._fit_subsequent_estimator(X, y, previous_weight, previous_error, previous_alpha, previous_prediction)
 
     def fit(self, X, y):
+        X, y = as_numpy_array(X, y)
+
         weight, error, alpha, prediction = None, None, None, None
         self.estimators_ = []
         self.alphas = []
@@ -217,6 +222,8 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
 
     def predict(self, X):
         self._check_fitted()
+        X = as_numpy_array(X)
+
         predictions = [clf.predict(X) for clf in self.estimators_]
         return ensemble_predictions_weighted(predictions, self.alphas)
 
@@ -279,11 +286,13 @@ class RolexBoostClassifier(RotationForestClassifier, FlexBoostClassifier):
         return clf, weight, error, alpha, prediction
 
     def fit(self, X, y):
+        X, y = as_numpy_array(X, y)
         self._rotation_precheck(X)
         FlexBoostClassifier.fit(self, X, y)
         return self
 
     def predict(self, X):
         self._check_fitted()
+        X = as_numpy_array(X)
         predictions = [clf.predict(X.dot(clf._rotation_matrix)) for clf in self.estimators_]
         return ensemble_predictions_weighted(predictions, self.alphas)
