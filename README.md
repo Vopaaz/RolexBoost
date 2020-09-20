@@ -176,7 +176,23 @@ The default parameter for `max_depth` is 1, because RolexBoost integrates the id
 
 ## Performance Benchmarks
 
+We have tested the three algorithms on 13 datasets mentioned in the paper.
 
+Here is the result:
 
+| algorithm      | accuracy | benchmark | ratio  |
+| -------------- | -------- | --------- | ------ |
+| RotationForest | 0.7898   | 0.7947    | 0.9938 |
+| FlexBoost      | 0.7976   | 0.8095    | 0.9853 |
+| RolexBoost     | 0.7775   | 0.8167    | 0.9520 |
 
+- `accuracy` refers to the average accuracy of our implementation
+- `benchmark` refers to the average accuracy reported in the paper
+- `ratio` is accuracy/benchmark
 
+For the detail of each algorithm on each dataset, please run the tests/accuracy-test.py.
+The test may take ~1 hour to finish.
+
+Some datasets reported in the paper are not involved in the benchmark testing for the following two reasons:
+1. We cannot find the corresponding dataset in the UCI Machine Learning Repository
+2. The 3-class problems are each divided into three 2-class problems. We are not sure about how such division is done.
