@@ -229,8 +229,6 @@ class FlexBoostClassifier(RolexAlgorithmMixin):
 
 
 class RolexBoostClassifier(RotationForestClassifier, FlexBoostClassifier):
-    """Temperoral implementation that use a DecisionTreeClassifier to mock the classifier behavior"""
-
     def __init__(
         self,
         n_estimators=100,
